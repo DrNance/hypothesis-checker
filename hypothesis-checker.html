@@ -1,0 +1,914 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hypothesis Checker — Psychology Capstone</title>
+<!-- Version log:
+  v1.0 — Initial build. Guided step-by-step hypothesis checker for PSY Capstone.
+          Checks t-test fit, feasibility, and ethics for two hypotheses.
+          Downloadable Word doc summary at end.
+-->
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;1,400&family=Source+Sans+3:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #f7f6f2;
+    --surface: #ffffff;
+    --surface-warm: #faf9f5;
+    --border: #e2ddd4;
+    --border-light: #edeae3;
+    --text: #1a1a1a;
+    --text-mid: #4a4540;
+    --text-light: #8a8278;
+    --accent: #c9a84c;
+    --accent-light: #fdf6e3;
+    --accent-dark: #9a7a28;
+    --warn: #b85c2a;
+    --warn-light: #fdf0e8;
+    --success: #4a7a5a;
+    --success-light: #eaf3ee;
+    --shadow-sm: 0 1px 4px rgba(26,26,26,0.07), 0 0 0 1px rgba(26,26,26,0.04);
+    --shadow-md: 0 4px 16px rgba(26,26,26,0.09), 0 0 0 1px rgba(26,26,26,0.04);
+    --shadow-lg: 0 8px 32px rgba(26,26,26,0.11), 0 0 0 1px rgba(26,26,26,0.04);
+    --radius: 10px;
+    --radius-sm: 6px;
+  }
+
+  body {
+    font-family: 'Source Sans 3', sans-serif;
+    font-weight: 300;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 2rem 1rem 4rem;
+    line-height: 1.7;
+  }
+
+  /* Subtle paper texture via repeating gradient */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: repeating-linear-gradient(
+      0deg, transparent, transparent 2px,
+      rgba(44,40,37,0.012) 2px, rgba(44,40,37,0.012) 4px
+    );
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    max-width: 640px;
+    margin: 0 auto;
+    position: relative;
+    z-index: 1;
+  }
+
+  header {
+    text-align: center;
+    margin-bottom: 2.5rem;
+  }
+
+  header h1 {
+    font-family: 'Lora', serif;
+    font-weight: 400;
+    font-size: 1.75rem;
+    color: var(--text);
+    letter-spacing: -0.01em;
+    margin-bottom: 0.4rem;
+  }
+
+  header p {
+    color: var(--text-mid);
+    font-size: 0.95rem;
+    font-weight: 300;
+  }
+
+  .progress-wrap {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    margin-bottom: 2rem;
+  }
+
+  .progress-step {
+    flex: 1;
+    text-align: center;
+    font-size: 0.78rem;
+    font-weight: 400;
+    color: var(--text-light);
+    padding: 0.5rem 0.25rem;
+    border-bottom: 2px solid var(--border);
+    transition: all 0.3s ease;
+  }
+
+  .progress-step.active {
+    color: var(--accent-dark);
+    border-bottom-color: var(--accent);
+    font-weight: 500;
+  }
+
+  .progress-step.done {
+    color: var(--success);
+    border-bottom-color: var(--success);
+  }
+
+  .card {
+    background: var(--surface);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-md);
+    padding: 2rem;
+    margin-bottom: 1.25rem;
+    animation: fadeUp 0.35s ease both;
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .card-label {
+    font-size: 0.72rem;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-light);
+    margin-bottom: 0.75rem;
+  }
+
+  .card h2 {
+    font-family: 'Lora', serif;
+    font-weight: 400;
+    font-size: 1.2rem;
+    color: var(--text);
+    margin-bottom: 0.75rem;
+    line-height: 1.4;
+  }
+
+  .card p {
+    color: var(--text-mid);
+    font-size: 0.95rem;
+    margin-bottom: 1rem;
+  }
+
+  .card p:last-child { margin-bottom: 0; }
+
+  textarea, input[type="text"] {
+    width: 100%;
+    font-family: 'Source Sans 3', sans-serif;
+    font-size: 0.95rem;
+    font-weight: 300;
+    color: var(--text);
+    background: var(--surface-warm);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 0.75rem 1rem;
+    resize: vertical;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    line-height: 1.6;
+  }
+
+  textarea { min-height: 80px; }
+
+  textarea:focus, input[type="text"]:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(122,158,142,0.15);
+  }
+
+  textarea::placeholder, input::placeholder { color: var(--text-light); }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.65rem 1.4rem;
+    border-radius: var(--radius-sm);
+    font-family: 'Source Sans 3', sans-serif;
+    font-size: 0.9rem;
+    font-weight: 400;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s ease;
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: #fff;
+  }
+
+  .btn-primary:hover { background: var(--accent-dark); transform: translateY(-1px); box-shadow: var(--shadow-sm); }
+  .btn-primary:active { transform: translateY(0); }
+
+  .btn-secondary {
+    background: transparent;
+    color: var(--text-mid);
+    border: 1px solid var(--border);
+  }
+
+  .btn-secondary:hover { background: var(--surface-warm); border-color: var(--text-light); }
+
+  .btn-success {
+    background: var(--success);
+    color: #fff;
+  }
+
+  .btn-success:hover { background: var(--accent-dark); transform: translateY(-1px); }
+
+  .btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none !important; }
+
+  .btn-row {
+    display: flex;
+    gap: 0.75rem;
+    margin-top: 1.25rem;
+    flex-wrap: wrap;
+  }
+
+  .feedback {
+    border-radius: var(--radius-sm);
+    padding: 1rem 1.25rem;
+    margin-top: 1rem;
+    font-size: 0.92rem;
+    line-height: 1.65;
+    animation: fadeUp 0.3s ease both;
+  }
+
+  .feedback.warn {
+    background: var(--warn-light);
+    border-left: 3px solid var(--warn);
+    color: #5c3a1e;
+  }
+
+  .feedback.success {
+    background: var(--success-light);
+    border-left: 3px solid var(--success);
+    color: #2a4f3a;
+  }
+
+  .feedback.info {
+    background: var(--accent-light);
+    border-left: 3px solid var(--accent);
+    color: #2a4040;
+  }
+
+  .radio-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    margin-top: 0.5rem;
+  }
+
+  .radio-option {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    background: var(--surface-warm);
+  }
+
+  .radio-option:hover { border-color: var(--accent); background: var(--accent-light); }
+
+  .radio-option input[type="radio"] {
+    margin-top: 0.2rem;
+    accent-color: var(--accent);
+    flex-shrink: 0;
+  }
+
+  .radio-option label {
+    font-size: 0.92rem;
+    color: var(--text);
+    cursor: pointer;
+    line-height: 1.5;
+  }
+
+  .hypothesis-display {
+    background: var(--surface-warm);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-sm);
+    padding: 0.85rem 1.1rem;
+    font-style: italic;
+    color: var(--text-mid);
+    font-size: 0.93rem;
+    margin-bottom: 1rem;
+    font-family: 'Lora', serif;
+  }
+
+  .summary-hyp {
+    margin-bottom: 1.5rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid var(--border-light);
+  }
+
+  .summary-hyp:last-of-type { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+
+  .summary-hyp h3 {
+    font-family: 'Lora', serif;
+    font-weight: 500;
+    font-size: 1rem;
+    margin-bottom: 0.5rem;
+    color: var(--text);
+  }
+
+  .tag {
+    display: inline-block;
+    font-size: 0.72rem;
+    font-weight: 500;
+    letter-spacing: 0.05em;
+    padding: 0.2rem 0.6rem;
+    border-radius: 20px;
+    margin-right: 0.4rem;
+    margin-bottom: 0.4rem;
+  }
+
+  .tag-success { background: var(--success-light); color: var(--success); }
+
+  #screen-start, #screen-p1, #screen-p2, #screen-summary { display: none; }
+  #screen-start.visible, #screen-p1.visible, #screen-p2.visible, #screen-summary.visible { display: block; }
+
+  .step-indicator {
+    font-size: 0.8rem;
+    color: var(--text-light);
+    margin-bottom: 0.3rem;
+  }
+
+  .divider {
+    height: 1px;
+    background: var(--border-light);
+    margin: 1.5rem 0;
+  }
+
+  footer {
+    text-align: center;
+    margin-top: 3rem;
+    color: var(--text-light);
+    font-size: 0.8rem;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <h1>Hypothesis Checker</h1>
+    <p>Psychology Capstone &nbsp;·&nbsp; Pre-draft activity</p>
+  </header>
+
+  <div class="progress-wrap" id="progress-bar" aria-label="Progress">
+    <div class="progress-step active" id="prog-0">Welcome</div>
+    <div class="progress-step" id="prog-1">Primary hypothesis</div>
+    <div class="progress-step" id="prog-2">Secondary hypothesis</div>
+    <div class="progress-step" id="prog-3">Summary</div>
+  </div>
+
+  <!-- SCREEN: Start -->
+  <div id="screen-start" class="visible" role="main">
+    <div class="card">
+      <div class="card-label">Before you begin</div>
+      <h2>Welcome to the Hypothesis Checker</h2>
+      <p>This activity will guide you through checking two research hypotheses before you submit your first draft. We'll look at each hypothesis together — one question at a time — and give you feedback along the way.</p>
+      <p>You'll check whether each hypothesis is appropriate for a t-test, whether your study is feasible, and whether it meets ethical guidelines. If something needs adjusting, you'll have the chance to revise right here.</p>
+      <p>At the end, you'll be able to download a summary of your approved hypotheses as proof of completion.</p>
+      <p style="color: var(--text-light); font-size:0.88rem;">Take your time. There are no trick questions — just a chance to think through your ideas carefully before they affect your grade.</p>
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="startActivity()">Let's begin →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCREEN: Primary Hypothesis -->
+  <div id="screen-p1" role="main">
+    <div id="p1-steps"></div>
+  </div>
+
+  <!-- SCREEN: Secondary Hypothesis -->
+  <div id="screen-p2" role="main">
+    <div id="p2-steps"></div>
+  </div>
+
+  <!-- SCREEN: Summary -->
+  <div id="screen-summary" role="main">
+    <div class="card">
+      <div class="card-label">Activity complete</div>
+      <h2>Both hypotheses approved ✓</h2>
+      <p>Wonderful work. Here's a summary of your approved hypotheses and the feedback you received. Download this document and submit it with your first draft.</p>
+      <div class="divider"></div>
+      <div id="summary-content"></div>
+      <div class="btn-row" style="margin-top:1.5rem;">
+        <button class="btn btn-success" onclick="downloadDoc()">Download summary (.docx)</button>
+      </div>
+    </div>
+  </div>
+
+  <footer>Psychology Capstone &nbsp;·&nbsp; Hypothesis Checker v1.0</footer>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/docx/8.5.0/docx.umd.min.js"></script>
+<script>
+// ── State ─────────────────────────────────────────────────────────────────────
+const state = {
+  screen: 'start',
+  p1: { hypothesis: '', iv: '', dv: '', feedback: [], approved: false },
+  p2: { hypothesis: '', iv: '', dv: '', feedback: [], approved: false },
+};
+
+// ── Navigation ────────────────────────────────────────────────────────────────
+function showScreen(name) {
+  ['start','p1','p2','summary'].forEach(s => {
+    document.getElementById('screen-' + s).classList.remove('visible');
+  });
+  document.getElementById('screen-' + name).classList.add('visible');
+  ['Welcome','Primary hypothesis','Secondary hypothesis','Summary'].forEach((_, i) => {
+    const el = document.getElementById('prog-' + i);
+    const map = { 'start': 0, 'p1': 1, 'p2': 2, 'summary': 3 };
+    el.className = 'progress-step';
+    if (i < map[name]) el.classList.add('done');
+    else if (i === map[name]) el.classList.add('active');
+  });
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function startActivity() {
+  showScreen('p1');
+  buildHypothesisFlow('p1');
+}
+
+// ── Hypothesis Flow Builder ───────────────────────────────────────────────────
+// Each hypothesis goes through the same sequence of steps.
+// step: 'enter' → 'iv' → 'dv' → 'ttest' → 'feasibility' → 'ethics1' → 'ethics2?' → 'approved'
+
+function buildHypothesisFlow(which) {
+  const container = document.getElementById(which + '-steps');
+  container.innerHTML = '';
+  renderStep(which, 'enter', container);
+}
+
+function renderStep(which, step, container) {
+  const isP1 = which === 'p1';
+  const data = state[which];
+
+  // Clear everything from this step forward
+  const existing = container.querySelectorAll('[data-step]');
+  let found = false;
+  existing.forEach(el => {
+    if (found) el.remove();
+    if (el.dataset.step === step) { found = true; el.remove(); }
+  });
+
+  const card = document.createElement('div');
+  card.className = 'card';
+  card.dataset.step = step;
+
+  if (step === 'enter') {
+    card.innerHTML = `
+      <div class="step-indicator">${isP1 ? 'Primary hypothesis' : 'Secondary hypothesis'} &nbsp;·&nbsp; Step 1 of 5</div>
+      <h2>${isP1 ? 'What is your primary hypothesis?' : 'What is your secondary hypothesis?'}</h2>
+      <p>${isP1
+        ? 'Your primary hypothesis should predict a difference between two groups using a t-test. It should <strong>not</strong> use a demographic variable (like gender, age, or race) as the independent variable.'
+        : 'Your secondary hypothesis should also use a t-test, but this time it <strong>must</strong> include a demographic variable as the independent variable — for example, comparing two gender groups or two age groups on some measure.'
+      }</p>
+      <textarea id="${which}-hyp-input" placeholder="Type your hypothesis here…" aria-label="Hypothesis" rows="3"></textarea>
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="submitHypothesis('${which}')">Continue →</button>
+      </div>
+      <div id="${which}-hyp-feedback"></div>
+    `;
+  }
+
+  else if (step === 'iv') {
+    card.innerHTML = `
+      <div class="step-indicator">${isP1 ? 'Primary' : 'Secondary'} hypothesis &nbsp;·&nbsp; Step 2 of 5</div>
+      <h2>Tell me about your independent variable</h2>
+      <div class="hypothesis-display">"${data.hypothesis}"</div>
+      <p>What is the independent variable (IV) in your hypothesis — that is, the variable that defines the two groups you're comparing?</p>
+      <input type="text" id="${which}-iv-input" placeholder="e.g., sleep quality, exercise frequency…" aria-label="Independent variable">
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="submitIV('${which}')">Continue →</button>
+      </div>
+      <div id="${which}-iv-feedback"></div>
+    `;
+  }
+
+  else if (step === 'dv') {
+    card.innerHTML = `
+      <div class="step-indicator">${isP1 ? 'Primary' : 'Secondary'} hypothesis &nbsp;·&nbsp; Step 3 of 5</div>
+      <h2>Now tell me about your dependent variable</h2>
+      <div class="hypothesis-display">"${data.hypothesis}"</div>
+      <p>What is the dependent variable (DV) — the outcome you're measuring?</p>
+      <input type="text" id="${which}-dv-input" placeholder="e.g., exam scores, anxiety levels…" aria-label="Dependent variable">
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="submitDV('${which}')">Continue →</button>
+      </div>
+      <div id="${which}-dv-feedback"></div>
+    `;
+  }
+
+  else if (step === 'ttest') {
+    card.innerHTML = `
+      <div class="step-indicator">${isP1 ? 'Primary' : 'Secondary'} hypothesis &nbsp;·&nbsp; Step 4 of 5 — T-test check</div>
+      <h2>Let's check whether this hypothesis fits a t-test</h2>
+      <div class="hypothesis-display">"${data.hypothesis}"</div>
+      <p>A t-test compares the means of <strong>exactly two groups</strong> on a <strong>continuous</strong> outcome. Answer this question to check your hypothesis.</p>
+      <p style="margin-top:0.75rem; font-weight:500; color:var(--text);">Is your dependent variable continuous — that is, does it produce scores that can be averaged?</p>
+      <div class="radio-group">
+        <div class="radio-option"><input type="radio" name="${which}-dv-type" id="${which}-dvc" value="continuous"><label for="${which}-dvc">Yes — it produces scores or measurements (e.g., a scale score, a count, a time)</label></div>
+        <div class="radio-option"><input type="radio" name="${which}-dv-type" id="${which}-dvcat" value="categorical"><label for="${which}-dvcat">No — it produces categories (e.g., yes/no, type A/B/C)</label></div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="submitTtest('${which}')">Continue →</button>
+      </div>
+      <div id="${which}-ttest-feedback"></div>
+    `;
+  }
+
+  else if (step === 'feasibility') {
+    card.innerHTML = `
+      <div class="step-indicator">${isP1 ? 'Primary' : 'Secondary'} hypothesis &nbsp;·&nbsp; Step 5 of 5 — Feasibility check</div>
+      <h2>Let's check whether your study is feasible</h2>
+      <div class="hypothesis-display">"${data.hypothesis}"</div>
+      <p>A feasible study is one where <strong>every participant</strong> can provide complete data. If your grouping variable only applies to some people, participants who don't fit either group would have to be excluded — which can seriously undermine your study.</p>
+      <p>For example: comparing <em>happy couples vs. unhappy couples</em> is not feasible, because single participants couldn't be placed in either group and their data would be lost. Comparing <em>coupled vs. single</em> is feasible, because everyone can answer.</p>
+      <p style="margin-top:0.75rem; font-weight:500; color:var(--text);">Think about your independent variable: <em>${data.iv}</em>. Could every participant in your study be placed into one of your two groups?</p>
+      <div class="radio-group">
+        <div class="radio-option"><input type="radio" name="${which}-feasible" id="${which}-fyes" value="yes"><label for="${which}-fyes">Yes — every participant could be placed in one of the two groups</label></div>
+        <div class="radio-option"><input type="radio" name="${which}-feasible" id="${which}-fno" value="no"><label for="${which}-fno">No — some participants might not fit either group</label></div>
+        <div class="radio-option"><input type="radio" name="${which}-feasible" id="${which}-fmaybe" value="maybe"><label for="${which}-fmaybe">I'm not sure</label></div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="submitFeasibility('${which}')">Continue →</button>
+      </div>
+      <div id="${which}-feasibility-feedback"></div>
+    `;
+  }
+
+  else if (step === 'ethics1') {
+    card.innerHTML = `
+      <div class="step-indicator">${isP1 ? 'Primary' : 'Secondary'} hypothesis &nbsp;·&nbsp; Ethics check</div>
+      <h2>Almost there — let's do a quick ethics check</h2>
+      <div class="hypothesis-display">"${data.hypothesis}"</div>
+      <p>Before we give your hypothesis the green light, we need to make sure your study is ethical and appropriate for this course. Tell me a little about who would participate and what you'd be asking them.</p>
+      <p style="font-weight:500; color:var(--text);">Who are your participants, and what would they be asked to do or report on?</p>
+      <textarea id="${which}-ethics-input" placeholder="e.g., College students who would complete a survey about their sleep habits and stress levels…" rows="3" aria-label="Describe your participants and what they would be asked"></textarea>
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="submitEthics1('${which}')">Continue →</button>
+      </div>
+      <div id="${which}-ethics1-feedback"></div>
+    `;
+  }
+
+  else if (step === 'ethics2') {
+    card.innerHTML = `
+      <div class="step-indicator">${isP1 ? 'Primary' : 'Secondary'} hypothesis &nbsp;·&nbsp; Ethics check continued</div>
+      <h2>A couple of follow-up questions</h2>
+      <div class="hypothesis-display">"${data.hypothesis}"</div>
+      <p>Based on what you described, I want to ask a couple of follow-up questions to make sure everything is good to go.</p>
+      <p style="font-weight:500; color:var(--text);">Would any participants be under the age of 18?</p>
+      <div class="radio-group">
+        <div class="radio-option"><input type="radio" name="${which}-minors" id="${which}-mno" value="no"><label for="${which}-mno">No — all participants would be 18 or older</label></div>
+        <div class="radio-option"><input type="radio" name="${which}-minors" id="${which}-myes" value="yes"><label for="${which}-myes">Yes — some participants might be under 18</label></div>
+        <div class="radio-option"><input type="radio" name="${which}-minors" id="${which}-mmaybe" value="maybe"><label for="${which}-mmaybe">I'm not sure</label></div>
+      </div>
+      <p style="margin-top:1rem; font-weight:500; color:var(--text);">Would the study ask participants about any of the following? (select all that apply)</p>
+      <div class="radio-group">
+        <div class="radio-option"><input type="checkbox" id="${which}-ck-trauma" value="trauma"><label for="${which}-ck-trauma">Traumatic experiences or PTSD</label></div>
+        <div class="radio-option"><input type="checkbox" id="${which}-ck-suicide" value="suicide"><label for="${which}-ck-suicide">Suicidal thoughts, feelings, or behavior</label></div>
+        <div class="radio-option"><input type="checkbox" id="${which}-ck-illegal" value="illegal"><label for="${which}-ck-illegal">Illegal behavior or drug use</label></div>
+        <div class="radio-option"><input type="checkbox" id="${which}-ck-none" value="none"><label for="${which}-ck-none">None of the above</label></div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="submitEthics2('${which}')">Continue →</button>
+      </div>
+      <div id="${which}-ethics2-feedback"></div>
+    `;
+  }
+
+  else if (step === 'approved') {
+    const isLast = which === 'p2';
+    card.innerHTML = `
+      <div class="feedback success">
+        <strong>✓ ${isP1 ? 'Primary' : 'Secondary'} hypothesis approved!</strong><br>
+        Your hypothesis looks good on all three checks — t-test appropriateness, feasibility, and ethics. Well done!
+      </div>
+      <div class="hypothesis-display" style="margin-top:1rem;">"${data.hypothesis}"</div>
+      <div class="btn-row" style="margin-top:1rem;">
+        ${isLast
+          ? `<button class="btn btn-success" onclick="showSummary()">View summary and download →</button>`
+          : `<button class="btn btn-primary" onclick="startP2()">Continue to secondary hypothesis →</button>`
+        }
+      </div>
+    `;
+    data.approved = true;
+  }
+
+  container.appendChild(card);
+  card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// ── Step Handlers ─────────────────────────────────────────────────────────────
+
+function submitHypothesis(which) {
+  const input = document.getElementById(which + '-hyp-input');
+  const val = input.value.trim();
+  const fb = document.getElementById(which + '-hyp-feedback');
+  const isP1 = which === 'p1';
+
+  if (val.length < 10) {
+    fb.innerHTML = `<div class="feedback warn">Please enter your hypothesis before continuing.</div>`;
+    return;
+  }
+
+  // Check for demographic variable in primary hypothesis
+  const demographicTerms = [
+    // gender / sex
+    'gender','sex','male','female','men','women','man','woman','boy','girl','nonbinary','non-binary','transgender','trans ','cisgender',
+    // age
+    'age','older','younger','old','young','elderly','adult','adolescent','teen','senior','millennial','boomer','generation',
+    // race / ethnicity
+    'race','racial','ethnicity','ethnic','white','black','hispanic','latino','latina','latinx','asian','african','european','indigenous','native','biracial','multiracial',
+    // religion
+    'religion','religious','christian','muslim','jewish','hindu','buddhist','atheist','agnostic','faith','spiritual',
+    // nationality / geography
+    'nationality','national','country','american','international','immigrant','foreign',
+    // income / SES
+    'income','socioeconomic','ses','wealthy','poor','rich','low-income','high-income','working class','middle class','upper class',
+    // political
+    'political','democrat','republican','liberal','conservative','partisan','voting',
+    // relationship / marital status
+    'marital','married','single','divorced','widowed','relationship status','coupled','partnered',
+    // sexual orientation
+    'sexual orientation','sexuality','gay','lesbian','bisexual','heterosexual','straight','lgbtq','queer',
+    // education
+    'education level','educated','college graduate','degree',
+    // employment
+    'employed','unemployed','employment status',
+    // other common demographic IVs
+    'first-generation','first generation','first gen','urban','rural','suburban'
+  ];
+  const lv = val.toLowerCase();
+  const hasDemographic = demographicTerms.some(t => lv.includes(t));
+
+  if (isP1 && hasDemographic) {
+    fb.innerHTML = `<div class="feedback warn"><strong>Heads up — demographic variable detected.</strong><br>Your primary hypothesis appears to include a demographic variable as the independent variable (things like gender, age, race, income, etc.). The primary hypothesis should compare two groups based on a non-demographic variable — for example, high vs. low stress, morning vs. evening exercisers, etc.<br><br>Please revise your hypothesis and try again.</div>`;
+    return;
+  }
+
+  if (!isP1 && !hasDemographic) {
+    fb.innerHTML = `<div class="feedback warn"><strong>Missing demographic variable.</strong><br>Your secondary hypothesis needs to use a demographic variable as the independent variable — for example, gender, age group, or relationship status. It doesn't look like your current hypothesis includes one.<br><br>Please revise your hypothesis to include a demographic IV and try again.</div>`;
+    return;
+  }
+
+  state[which].hypothesis = val;
+  state[which].feedback.push(`Hypothesis: "${val}"`);
+  fb.innerHTML = '';
+  const container = document.getElementById(which + '-steps');
+  renderStep(which, 'iv', container);
+}
+
+function submitIV(which) {
+  const input = document.getElementById(which + '-iv-input');
+  const val = input.value.trim();
+  const fb = document.getElementById(which + '-iv-feedback');
+
+  if (val.length < 2) {
+    fb.innerHTML = `<div class="feedback warn">Please describe your independent variable before continuing.</div>`;
+    return;
+  }
+
+  state[which].iv = val;
+  state[which].feedback.push(`Independent variable: ${val}`);
+  fb.innerHTML = '';
+  const container = document.getElementById(which + '-steps');
+  renderStep(which, 'dv', container);
+}
+
+function submitDV(which) {
+  const input = document.getElementById(which + '-dv-input');
+  const val = input.value.trim();
+  const fb = document.getElementById(which + '-dv-feedback');
+
+  if (val.length < 2) {
+    fb.innerHTML = `<div class="feedback warn">Please describe your dependent variable before continuing.</div>`;
+    return;
+  }
+
+  state[which].dv = val;
+  state[which].feedback.push(`Dependent variable: ${val}`);
+  fb.innerHTML = '';
+  const container = document.getElementById(which + '-steps');
+  renderStep(which, 'ttest', container);
+}
+
+function submitTtest(which) {
+  const fb = document.getElementById(which + '-ttest-feedback');
+  const dvType = document.querySelector(`input[name="${which}-dv-type"]:checked`);
+
+  if (!dvType) {
+    fb.innerHTML = `<div class="feedback warn">Please answer the question before continuing.</div>`;
+    return;
+  }
+
+  const issues = [];
+  if (dvType.value === 'categorical') issues.push('Your dependent variable appears to be categorical (producing categories rather than scores). A t-test requires a <strong>continuous dependent variable</strong> — one that produces numerical scores that can be averaged, like a scale score or a time measurement.');
+
+  if (issues.length > 0) {
+    fb.innerHTML = `<div class="feedback warn"><strong>Your hypothesis needs some revision.</strong><br><br>${issues.join('<br><br>')}<br><br>Please scroll up, update your hypothesis, and start the check again.</div>
+    <div class="btn-row"><button class="btn btn-secondary" onclick="restartHypothesis('${which}')">← Revise my hypothesis</button></div>`;
+    state[which].feedback.push('T-test check: issues found — student revised.');
+    return;
+  }
+
+  state[which].feedback.push('T-test check: ✓ Passed');
+  fb.innerHTML = `<div class="feedback success">✓ Great — your hypothesis is structured correctly for a t-test.</div>`;
+  setTimeout(() => {
+    const container = document.getElementById(which + '-steps');
+    renderStep(which, 'feasibility', container);
+  }, 800);
+}
+
+function submitFeasibility(which) {
+  const fb = document.getElementById(which + '-feasibility-feedback');
+  const answer = document.querySelector(`input[name="${which}-feasible"]:checked`);
+
+  if (!answer) {
+    fb.innerHTML = `<div class="feedback warn">Please select an answer before continuing.</div>`;
+    return;
+  }
+
+  if (answer.value === 'no') {
+    fb.innerHTML = `<div class="feedback warn"><strong>Feasibility concern.</strong><br>If some participants can't be placed in either group, their data would have to be excluded — and that's a problem. A good study keeps everyone's data.<br><br>Think about whether there's a way to reframe your grouping variable so that every participant fits into one group or the other. For example, instead of "happy couples vs. unhappy couples" (which excludes single people), you might try "people in a relationship vs. people who are single."<br><br>Please revise your hypothesis and try again.</div>
+    <div class="btn-row"><button class="btn btn-secondary" onclick="restartHypothesis('${which}')">← Revise my hypothesis</button></div>`;
+    state[which].feedback.push('Feasibility check: issues found — student revised.');
+    return;
+  }
+
+  if (answer.value === 'maybe') {
+    fb.innerHTML = `<div class="feedback warn"><strong>Let's think this through.</strong><br>It's important to be sure about this before you commit to your hypothesis. Ask yourself: if someone didn't fit neatly into either of your two groups, what would happen to their data? If the answer is "it would be excluded," that's a feasibility problem.<br><br>If you're genuinely unsure, it's safer to revise your IV so that it clearly includes everyone. Take another look and try again.</div>
+    <div class="btn-row"><button class="btn btn-secondary" onclick="restartHypothesis('${which}')">← Revise my hypothesis</button></div>`;
+    state[which].feedback.push('Feasibility check: student was unsure — student revised.');
+    return;
+  }
+
+  state[which].feedback.push('Feasibility check: ✓ Passed');
+  fb.innerHTML = `<div class="feedback success">✓ Good — your study design keeps everyone's data intact.</div>`;
+  setTimeout(() => {
+    const container = document.getElementById(which + '-steps');
+    renderStep(which, 'ethics1', container);
+  }, 800);
+}
+
+function submitEthics1(which) {
+  const input = document.getElementById(which + '-ethics-input');
+  const val = input.value.trim();
+  const fb = document.getElementById(which + '-ethics1-feedback');
+
+  if (val.length < 10) {
+    fb.innerHTML = `<div class="feedback warn">Please describe your participants and what they'd be asked before continuing.</div>`;
+    return;
+  }
+
+  state[which].feedback.push(`Ethics — participant description: "${val}"`);
+  fb.innerHTML = '';
+
+  // Flag keywords for targeted follow-up
+  const lv = val.toLowerCase();
+  const sensitiveTerms = ['suicide','suicidal','trauma','traumatic','ptsd','abuse','illegal','drug','underage','minor','child','children','adolescent','teen'];
+  const flagged = sensitiveTerms.filter(t => lv.includes(t));
+
+  if (flagged.length > 0) {
+    fb.innerHTML = `<div class="feedback warn"><strong>I noticed something worth discussing.</strong><br>Your description mentions some sensitive topics (${flagged.join(', ')}). Let's make sure everything is appropriate for this course. I have a couple of follow-up questions.</div>`;
+    setTimeout(() => {
+      const container = document.getElementById(which + '-steps');
+      renderStep(which, 'ethics2', container);
+    }, 1000);
+  } else {
+    const container = document.getElementById(which + '-steps');
+    renderStep(which, 'ethics2', container);
+  }
+}
+
+function submitEthics2(which) {
+  const fb = document.getElementById(which + '-ethics2-feedback');
+  const minors = document.querySelector(`input[name="${which}-minors"]:checked`);
+
+  if (!minors) {
+    fb.innerHTML = `<div class="feedback warn">Please answer the question about participant age before continuing.</div>`;
+    return;
+  }
+
+  const checkedBoxes = [...document.querySelectorAll(`#screen-${which} input[type="checkbox"]:checked`)].map(c => c.value);
+  if (checkedBoxes.length === 0) {
+    fb.innerHTML = `<div class="feedback warn">Please check at least one option in the sensitive topics list (including "None of the above" if none apply).</div>`;
+    return;
+  }
+
+  const issues = [];
+
+  if (minors.value === 'yes' || minors.value === 'maybe') {
+    issues.push('Studies involving participants under 18 require special ethical approval and are not appropriate for this course. Please revise your hypothesis so that your study involves only adult participants (18 and older).');
+  }
+
+  const sensitiveChecked = checkedBoxes.filter(v => v !== 'none');
+  if (sensitiveChecked.length > 0) {
+    const labels = { trauma: 'traumatic experiences or PTSD', suicide: 'suicidal thoughts or behavior', illegal: 'illegal behavior or drug use' };
+    const flaggedLabels = sensitiveChecked.map(v => labels[v]).join('; ');
+    issues.push(`Studies that ask about ${flaggedLabels} raise significant ethical concerns and are not appropriate for this course. Please revise your hypothesis to focus on a topic that does not involve these sensitive areas.`);
+  }
+
+  if (issues.length > 0) {
+    fb.innerHTML = `<div class="feedback warn"><strong>Ethics concern — revision needed.</strong><br><br>${issues.join('<br><br>')}<br><br>Please revise your hypothesis and start the check again.</div>
+    <div class="btn-row"><button class="btn btn-secondary" onclick="restartHypothesis('${which}')">← Revise my hypothesis</button></div>`;
+    state[which].feedback.push('Ethics check: issues found — student revised.');
+    return;
+  }
+
+  state[which].feedback.push('Ethics check: ✓ Passed');
+  fb.innerHTML = `<div class="feedback success">✓ No ethics concerns — your study looks appropriate.</div>`;
+  setTimeout(() => {
+    const container = document.getElementById(which + '-steps');
+    renderStep(which, 'approved', container);
+  }, 800);
+}
+
+function restartHypothesis(which) {
+  state[which] = { hypothesis: '', iv: '', dv: '', feedback: [], approved: false };
+  const container = document.getElementById(which + '-steps');
+  container.innerHTML = '';
+  renderStep(which, 'enter', container);
+}
+
+function startP2() {
+  showScreen('p2');
+  buildHypothesisFlow('p2');
+}
+
+// ── Summary ───────────────────────────────────────────────────────────────────
+function showSummary() {
+  showScreen('summary');
+  const el = document.getElementById('summary-content');
+  el.innerHTML = `
+    <div class="summary-hyp">
+      <h3>Primary hypothesis</h3>
+      <div class="hypothesis-display">"${state.p1.hypothesis}"</div>
+      <span class="tag tag-success">✓ T-test appropriate</span>
+      <span class="tag tag-success">✓ Feasible</span>
+      <span class="tag tag-success">✓ Ethical</span>
+    </div>
+    <div class="summary-hyp">
+      <h3>Secondary hypothesis</h3>
+      <div class="hypothesis-display">"${state.p2.hypothesis}"</div>
+      <span class="tag tag-success">✓ T-test appropriate</span>
+      <span class="tag tag-success">✓ Feasible</span>
+      <span class="tag tag-success">✓ Ethical</span>
+    </div>
+  `;
+}
+
+// ── Download ──────────────────────────────────────────────────────────────────
+function downloadDoc() {
+  try {
+    const { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType } = docx;
+
+    const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+
+    const doc = new Document({
+      sections: [{
+        children: [
+          new Paragraph({ text: 'Hypothesis Checker — Completion Summary', heading: HeadingLevel.HEADING_1, alignment: AlignmentType.CENTER }),
+          new Paragraph({ text: 'Psychology Capstone  ·  Pre-draft activity', alignment: AlignmentType.CENTER, spacing: { after: 200 } }),
+          new Paragraph({ text: `Completed: ${today}`, alignment: AlignmentType.CENTER, spacing: { after: 400 } }),
+
+          new Paragraph({ text: 'Primary Hypothesis', heading: HeadingLevel.HEADING_2, spacing: { before: 300, after: 100 } }),
+          new Paragraph({ children: [new TextRun({ text: state.p1.hypothesis, italics: true })], spacing: { after: 200 } }),
+          new Paragraph({ children: [new TextRun({ text: '✓ T-test appropriate  ·  ✓ Feasible  ·  ✓ Ethical', bold: true, color: '2d6a4f' })], spacing: { after: 300 } }),
+
+          new Paragraph({ text: 'Secondary Hypothesis', heading: HeadingLevel.HEADING_2, spacing: { before: 300, after: 100 } }),
+          new Paragraph({ children: [new TextRun({ text: state.p2.hypothesis, italics: true })], spacing: { after: 200 } }),
+          new Paragraph({ children: [new TextRun({ text: '✓ T-test appropriate  ·  ✓ Feasible  ·  ✓ Ethical', bold: true, color: '2d6a4f' })], spacing: { after: 300 } }),
+
+          new Paragraph({ text: 'Activity Log', heading: HeadingLevel.HEADING_2, spacing: { before: 400, after: 100 } }),
+          ...state.p1.feedback.map(f => new Paragraph({ text: 'Primary — ' + f, spacing: { after: 80 } })),
+          ...state.p2.feedback.map(f => new Paragraph({ text: 'Secondary — ' + f, spacing: { after: 80 } })),
+        ]
+      }]
+    });
+
+    Packer.toBlob(doc).then(blob => {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'Hypothesis_Checker_Summary.docx';
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+  } catch(e) {
+    alert('Download failed. Your browser may not support this feature. Please take a screenshot of this page instead.');
+  }
+}
+</script>
+</body>
+</html>
